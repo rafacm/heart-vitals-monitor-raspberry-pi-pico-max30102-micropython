@@ -142,7 +142,12 @@ class HeartRateMonitor:
                     last_peak_ts = t
 
         if len(peaks_ts) < 2:
-            return None
+            # No peaks in this window — fall through to return last median
+            # if we have prior readings, otherwise give up.
+            if self._bpm_count == 0:
+                return None
+            n = min(self._bpm_count, self.bpm_buffer_size)
+            return self._median(self._bpm_buf, n)
 
         # --- intervals → BPM with physiological clamping ---
         for i in range(1, len(peaks_ts)):
