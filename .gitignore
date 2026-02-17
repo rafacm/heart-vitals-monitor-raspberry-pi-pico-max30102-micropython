@@ -1,0 +1,22 @@
+# Byte-compiled / optimized
+*.py[cod]
+*.mpy
+__pycache__/
+
+# Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+.venv/
+venv/
+
+# MicroPython build artifacts
+build/
