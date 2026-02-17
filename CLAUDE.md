@@ -30,6 +30,8 @@ lib/
 test/
   max30102_test.py             # On-device heart-rate demo (HeartRateMonitor class)
   sh1106_test.py               # On-device display test suite (DisplayTester class)
+doc/
+  features/                    # Per-feature documentation (see Documentation section)
 ```
 
 ## Deploying to the board
@@ -62,3 +64,15 @@ Both test files have a `main()` entry point guarded by `if __name__ == "__main__
 - Drivers live under `lib/` so MicroPython's import path finds them automatically.
 - Code must fit in the Pico 2W's constrained RAM — keep allocations small, prefer pre-allocated buffers.
 - The MAX30102 driver is adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library.
+
+## Documentation
+
+Feature documentation lives in `doc/features/`, one Markdown file per feature or significant change. Each document should include:
+
+- **Problem** — what was wrong or what need the feature addresses.
+- **Changes** — what was modified, with enough detail that a reader can understand the approach without reading the diff.
+- **Key parameters** — any tunable constants, their values, and why those values were chosen.
+- **Verification** — how to test the change on-device (deploy command + expected behaviour).
+- **Files modified** — list of touched files with a one-line summary of each change.
+
+Keep prose concise. Prefer tables and lists over long paragraphs. Use code blocks for CLI commands and signal-flow diagrams.

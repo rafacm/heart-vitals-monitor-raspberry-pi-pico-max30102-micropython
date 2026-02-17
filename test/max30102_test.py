@@ -6,90 +6,143 @@
 
 import time
 from machine import I2C, Pin
-from utime import ticks_diff, ticks_us, ticks_ms
+from utime import ticks_diff, ticks_ms
 
 from max30102 import MAX30102, MAX30105_PULSE_AMP_MEDIUM
 
 
 class HeartRateMonitor:
-    """A simple heart rate monitor that uses a moving window to smooth the signal and find peaks."""
+    """Heart rate monitor with DC removal, refractory period, physiological
+    clamping, and median output filtering."""
 
-    def __init__(self, sample_rate=100, window_size=10, smoothing_window=5):
+    MIN_BPM = 40
+    MAX_BPM = 200
+    # Minimum ms between peaks (refractory period) — caps detection at ~200 BPM
+    MIN_PEAK_DISTANCE_MS = 300
+
+    def __init__(self, sample_rate=50, window_size=250, smoothing_window=15,
+                 bpm_buffer_size=5):
         self.sample_rate = sample_rate
         self.window_size = window_size
         self.smoothing_window = smoothing_window
-        self.samples = []
-        self.timestamps = []
-        self.filtered_samples = []
+        self.bpm_buffer_size = bpm_buffer_size
+
+        # Pre-allocated fixed-size ring buffers
+        self._samples = [0] * window_size
+        self._timestamps = [0] * window_size
+        self._n = 0  # total samples added (head index = _n % window_size)
+
+        # Smoothing accumulator
+        self._smooth_buf = [0] * smoothing_window
+        self._smooth_idx = 0
+        self._smooth_sum = 0
+        self._smooth_count = 0
+
+        # BPM median buffer
+        self._bpm_buf = [0.0] * bpm_buffer_size
+        self._bpm_count = 0
+
+    # ---- helpers ----
+
+    @staticmethod
+    def _median(lst, n):
+        """Return median of the first *n* elements of *lst*."""
+        tmp = sorted(lst[:n])
+        mid = n // 2
+        if n % 2 == 1:
+            return tmp[mid]
+        return (tmp[mid - 1] + tmp[mid]) / 2
+
+    def _buf_get(self, buf, age):
+        """Get an item from a ring buffer by age (0 = newest)."""
+        idx = (self._n - 1 - age) % self.window_size
+        return buf[idx]
+
+    # ---- public API ----
 
     def add_sample(self, sample):
-        """Add a new sample to the monitor."""
-        timestamp = ticks_ms()
-        self.samples.append(sample)
-        self.timestamps.append(timestamp)
+        ts = ticks_ms()
+        idx = self._n % self.window_size
+        self._samples[idx] = sample
+        self._timestamps[idx] = ts
+        self._n += 1
 
-        # Apply smoothing
-        if len(self.samples) >= self.smoothing_window:
-            smoothed_sample = (
-                sum(self.samples[-self.smoothing_window :]) / self.smoothing_window
-            )
-            self.filtered_samples.append(smoothed_sample)
-        else:
-            self.filtered_samples.append(sample)
-
-        # Maintain the size of samples and timestamps
-        if len(self.samples) > self.window_size:
-            self.samples.pop(0)
-            self.timestamps.pop(0)
-            self.filtered_samples.pop(0)
-
-    def find_peaks(self):
-        """Find peaks in the filtered samples."""
-        peaks = []
-
-        if len(self.filtered_samples) < 3:  # Need at least three samples to find a peak
-            return peaks
-
-        # Calculate dynamic threshold based on the min and max of the recent window of filtered samples
-        recent_samples = self.filtered_samples[-self.window_size :]
-        min_val = min(recent_samples)
-        max_val = max(recent_samples)
-        threshold = (
-            min_val + (max_val - min_val) * 0.5
-        )  # 50% between min and max as a threshold
-
-        for i in range(1, len(self.filtered_samples) - 1):
-            if (
-                self.filtered_samples[i] > threshold
-                and self.filtered_samples[i - 1] < self.filtered_samples[i]
-                and self.filtered_samples[i] > self.filtered_samples[i + 1]
-            ):
-                peak_time = self.timestamps[i]
-                peaks.append((peak_time, self.filtered_samples[i]))
-
-        return peaks
+        # Update running sum for smoothing window
+        old = self._smooth_buf[self._smooth_idx]
+        self._smooth_buf[self._smooth_idx] = sample
+        self._smooth_sum += sample - old
+        self._smooth_idx = (self._smooth_idx + 1) % self.smoothing_window
+        if self._smooth_count < self.smoothing_window:
+            self._smooth_count += 1
 
     def calculate_heart_rate(self):
-        """Calculate the heart rate in beats per minute (BPM)."""
-        peaks = self.find_peaks()
+        """Return the median-filtered BPM, or None if not enough data."""
+        filled = min(self._n, self.window_size)
+        if filled < self.smoothing_window + 2:
+            return None
 
-        if len(peaks) < 2:
-            return None  # Not enough peaks to calculate heart rate
+        # --- build DC-removed smoothed signal over the filled window ---
+        sig_len = filled
+        sig = [0] * sig_len  # smoothed & DC-removed
+        ts = [0] * sig_len   # corresponding timestamps
 
-        # Calculate the average interval between peaks in milliseconds
-        intervals = []
-        for i in range(1, len(peaks)):
-            interval = ticks_diff(peaks[i][0], peaks[i - 1][0])
-            intervals.append(interval)
+        # We iterate from oldest to newest
+        for i in range(sig_len):
+            age = sig_len - 1 - i
+            ts[i] = self._buf_get(self._timestamps, age)
 
-        average_interval = sum(intervals) / len(intervals)
+            # Compute local moving-average centred on this sample
+            half = self.smoothing_window // 2
+            acc = 0
+            count = 0
+            for j in range(-half, half + 1):
+                a = age + j
+                if 0 <= a < filled:
+                    acc += self._buf_get(self._samples, a)
+                    count += 1
+            sig[i] = acc / count if count else 0
 
-        # Convert intervals to heart rate in beats per minute (BPM)
-        heart_rate = (
-            60000 / average_interval
-        )  # 60 seconds per minute * 1000 ms per second
+        # DC removal: subtract overall mean
+        mean = sum(sig) / sig_len
+        for i in range(sig_len):
+            sig[i] -= mean
 
-        return heart_rate
+        # --- peak detection with refractory period ---
+        # Dynamic threshold at 30% of positive range
+        max_val = max(sig)
+        threshold = max_val * 0.3 if max_val > 0 else 0
+
+        peaks_ts = []
+        last_peak_ts = -self.MIN_PEAK_DISTANCE_MS * 2  # allow first peak
+
+        for i in range(1, sig_len - 1):
+            if (sig[i] > threshold
+                    and sig[i] > sig[i - 1]
+                    and sig[i] > sig[i + 1]):
+                t = ts[i]
+                if ticks_diff(t, last_peak_ts) >= self.MIN_PEAK_DISTANCE_MS:
+                    peaks_ts.append(t)
+                    last_peak_ts = t
+
+        if len(peaks_ts) < 2:
+            return None
+
+        # --- intervals → BPM with physiological clamping ---
+        for i in range(1, len(peaks_ts)):
+            interval = ticks_diff(peaks_ts[i], peaks_ts[i - 1])
+            if interval <= 0:
+                continue
+            bpm = 60000 / interval
+            if self.MIN_BPM <= bpm <= self.MAX_BPM:
+                idx = self._bpm_count % self.bpm_buffer_size
+                self._bpm_buf[idx] = bpm
+                self._bpm_count += 1
+
+        if self._bpm_count == 0:
+            return None
+
+        n = min(self._bpm_count, self.bpm_buffer_size)
+        return self._median(self._bpm_buf, n)
 
 
 def main():
@@ -141,15 +194,15 @@ def main():
     )
     time.sleep(1)
 
-    # Initialize the heart rate monitor
+    # Initialize the heart rate monitor with a 5-second window
     hr_monitor = HeartRateMonitor(
-        # Select a sample rate that matches the sensor's acquisition rate
         sample_rate=actual_acquisition_rate,
-        # Select a significant window size to calculate the heart rate (2-5 seconds)
-        window_size=int(actual_acquisition_rate * 3),
+        window_size=int(actual_acquisition_rate * 5),
+        smoothing_window=15,
+        bpm_buffer_size=5,
     )
 
-    # Setup to calculate the heart rate every 2 seconds
+    # Calculate the heart rate every 2 seconds
     hr_compute_interval = 2  # seconds
     ref_time = ticks_ms()  # Reference time
 
@@ -166,19 +219,15 @@ def main():
             ir_reading = sensor.pop_ir_from_storage()
 
             # Add the IR reading to the heart rate monitor
-            # Note: based on the skin color, the red, IR or green LED can be used
-            # to calculate the heart rate with more accuracy.
             hr_monitor.add_sample(ir_reading)
 
         # Periodically calculate the heart rate every `hr_compute_interval` seconds
         if ticks_diff(ticks_ms(), ref_time) / 1000 > hr_compute_interval:
-            # Calculate the heart rate
             heart_rate = hr_monitor.calculate_heart_rate()
             if heart_rate is not None:
                 print("Heart Rate: {:.0f} BPM".format(heart_rate))
             else:
                 print("Not enough data to calculate heart rate")
-            # Reset the reference time
             ref_time = ticks_ms()
 
 

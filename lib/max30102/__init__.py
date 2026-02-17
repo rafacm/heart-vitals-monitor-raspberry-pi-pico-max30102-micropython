@@ -681,7 +681,7 @@ class MAX30102(object):
                         self.fifo_bytes_to_int(fifo_bytes[6:9])
                     )
 
-                return True
+            return True
 
         else:
             return False
