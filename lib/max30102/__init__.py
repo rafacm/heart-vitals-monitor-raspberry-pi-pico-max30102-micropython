@@ -686,6 +686,16 @@ class MAX30102(object):
         else:
             return False
 
+    def check_finger(self, threshold=10000):
+        """Check if a finger is detected on the sensor.
+
+        Reads the current IR value and returns True if it exceeds
+        the threshold, indicating a finger is present.
+        """
+        self.check()
+        ir_value = self.pop_ir_from_storage()
+        return ir_value > threshold
+
     # Check for new data but give up after a certain amount of time
     def safe_check(self, max_time_to_check):
         mark_time = ticks_ms()

@@ -60,6 +60,23 @@ class HeartRateMonitor:
 
     # ---- public API ----
 
+    def reset(self):
+        """Clear all internal buffers for a fresh reading session."""
+        for i in range(self.window_size):
+            self._samples[i] = 0
+            self._timestamps[i] = 0
+        self._n = 0
+
+        for i in range(self.smoothing_window):
+            self._smooth_buf[i] = 0
+        self._smooth_idx = 0
+        self._smooth_sum = 0
+        self._smooth_count = 0
+
+        for i in range(self.bpm_buffer_size):
+            self._bpm_buf[i] = 0.0
+        self._bpm_count = 0
+
     def add_sample(self, sample):
         ts = ticks_ms()
         idx = self._n % self.window_size
@@ -187,12 +204,10 @@ def main():
 
     time.sleep(1)
 
-    print(
-        "Starting data acquisition from RED & IR registers...",
-        "press Ctrl+C to stop.",
-        "\n",
-    )
-    time.sleep(1)
+    # IR threshold for finger detection
+    IR_FINGER_THRESHOLD = 10000
+    # Running average window for mid-reading finger removal detection
+    IR_AVG_WINDOW = 20
 
     # Initialize the heart rate monitor with a 5-second window
     hr_monitor = HeartRateMonitor(
@@ -202,33 +217,58 @@ def main():
         bpm_buffer_size=5,
     )
 
-    # Calculate the heart rate every 2 seconds
-    hr_compute_interval = 2  # seconds
-    ref_time = ticks_ms()  # Reference time
-
     while True:
-        # The check() method has to be continuously polled, to check if
-        # there are new readings into the sensor's FIFO queue. When new
-        # readings are available, this function will put them into the storage.
-        sensor.check()
+        # --- Wait for finger placement ---
+        print("Place your finger on the sensor...")
+        while not sensor.check_finger(IR_FINGER_THRESHOLD):
+            time.sleep_ms(20)
 
-        # Check if the storage contains available samples
-        if sensor.available():
-            # Access the storage FIFO and gather the readings (integers)
-            red_reading = sensor.pop_red_from_storage()
-            ir_reading = sensor.pop_ir_from_storage()
+        print("Finger detected! Starting heart rate measurement...\n")
+        hr_monitor.reset()
 
-            # Add the IR reading to the heart rate monitor
-            hr_monitor.add_sample(ir_reading)
+        # Running average for finger removal detection
+        ir_avg_sum = 0
+        ir_avg_count = 0
+        ir_avg_buf = [0] * IR_AVG_WINDOW
+        ir_avg_idx = 0
 
-        # Periodically calculate the heart rate every `hr_compute_interval` seconds
-        if ticks_diff(ticks_ms(), ref_time) / 1000 > hr_compute_interval:
-            heart_rate = hr_monitor.calculate_heart_rate()
-            if heart_rate is not None:
-                print("Heart Rate: {:.0f} BPM".format(heart_rate))
-            else:
-                print("Not enough data to calculate heart rate")
-            ref_time = ticks_ms()
+        # Calculate the heart rate every 2 seconds
+        hr_compute_interval = 2  # seconds
+        ref_time = ticks_ms()
+        finger_present = True
+
+        while finger_present:
+            sensor.check()
+
+            if sensor.available():
+                red_reading = sensor.pop_red_from_storage()
+                ir_reading = sensor.pop_ir_from_storage()
+
+                # Update running average for finger detection
+                old = ir_avg_buf[ir_avg_idx]
+                ir_avg_buf[ir_avg_idx] = ir_reading
+                ir_avg_sum += ir_reading - old
+                ir_avg_idx = (ir_avg_idx + 1) % IR_AVG_WINDOW
+                if ir_avg_count < IR_AVG_WINDOW:
+                    ir_avg_count += 1
+
+                # Check for finger removal once we have enough samples
+                if ir_avg_count >= IR_AVG_WINDOW:
+                    ir_avg = ir_avg_sum / ir_avg_count
+                    if ir_avg < IR_FINGER_THRESHOLD:
+                        print("Finger removed.\n")
+                        finger_present = False
+                        break
+
+                hr_monitor.add_sample(ir_reading)
+
+            if ticks_diff(ticks_ms(), ref_time) / 1000 > hr_compute_interval:
+                heart_rate = hr_monitor.calculate_heart_rate()
+                if heart_rate is not None:
+                    print("Heart Rate: {:.0f} BPM".format(heart_rate))
+                else:
+                    print("Not enough data to calculate heart rate")
+                ref_time = ticks_ms()
 
 
 if __name__ == "__main__":
