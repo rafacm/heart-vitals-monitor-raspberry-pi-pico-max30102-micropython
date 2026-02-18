@@ -1,6 +1,6 @@
 from machine import I2C, Pin
 
-from max30102 import MAX30102, MAX30105_PULSE_AMP_MEDIUM
+from max30102 import MAX30102, LED_AMP_MEDIUM
 from sh1106 import SH1106
 from heart_vitals_display import HeartVitalsDisplay
 
@@ -14,7 +14,7 @@ sensor.setup_sensor(
     led_mode=2,
     adc_range=16384,
     sample_rate=400,
-    led_power=MAX30105_PULSE_AMP_MEDIUM,
+    led_power=LED_AMP_MEDIUM,
     sample_avg=8,
     pulse_width=411,
 )

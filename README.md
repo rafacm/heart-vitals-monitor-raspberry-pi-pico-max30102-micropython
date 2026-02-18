@@ -20,17 +20,40 @@ Each device uses a dedicated I2C bus, both running at 400 kHz:
 | MAX30102 | I2C1 | 0x57        | Pulse-oximeter / heart-rate sensor |
 | SH1106   | I2C0 | 0x3C        | 128×64 OLED display |
 
+## How the MAX30102 sensor works
+
+The MAX30102 is a pulse-oximetry and heart-rate sensor that uses **photoplethysmography (PPG)**. It shines red and infrared LEDs into the skin and measures how much light is absorbed by blood flowing through the capillaries.
+
+**Signal path:**
+
+```
+LED pulse → skin → photodetector → ADC → 32-sample FIFO → I2C read
+```
+
+The on-chip ADC samples at a configurable rate (50–3200 Hz) with programmable averaging (1–32 samples). The host reads 3-byte (18-bit) values per channel from the FIFO register.
+
+**Key registers:**
+
+| Register | Address | Purpose |
+|----------|---------|---------|
+| FIFO_DATA | 0x07 | Burst-read sample data (3 bytes/channel) |
+| FIFO_CONFIG | 0x08 | Sample averaging, FIFO rollover |
+| MODE_CONFIG | 0x09 | LED mode (red-only, red+IR), reset, shutdown |
+| SPO2_CONFIG | 0x0A | ADC range, sample rate, pulse width |
+| LED1/LED2_AMP | 0x0C/0x0D | LED drive current (detection range) |
+| PART_ID | 0xFF | Device ID (always 0x15) |
+
+**SpO2 estimation** uses the ratio-of-ratios method: R = (AC_red / DC_red) / (AC_ir / DC_ir), mapped to SpO2 via a linear calibration curve.
+
 ## Project layout
 
 ```
 main.py                        # Entry point (runs on boot)
 lib/
-  max30102/
-    __init__.py                # MAX30102 driver (I2C register access, FIFO reads)
-    circular_buffer.py         # Ring buffer backed by ucollections.deque
+  max30102.py                  # MAX30102 driver (I2C register access, FIFO reads)
   sh1106.py                   # SH1106 OLED driver (I2C, framebuf-based)
 test/
-  max30102_test.py             # On-device heart-rate demo (HeartRateMonitor class)
+  max30102_test.py             # On-device hardware check + heart-rate demo
   sh1106_test.py               # On-device display test suite (DisplayTester class)
 ```
 
@@ -58,7 +81,7 @@ mpremote run test/sh1106_test.py     # OLED display test suite
 
 ## Acknowledgements
 
-- MAX30102 driver adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library.
+- MAX30102 driver originally adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library, rewritten as a lean flat module.
 - Built with assistance from [Claude](https://claude.ai).
 
 ## License

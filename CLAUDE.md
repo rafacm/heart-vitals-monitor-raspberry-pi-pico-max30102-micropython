@@ -25,12 +25,10 @@ Both buses run at 400 kHz.
 ```
 main.py                        # Entry point (runs on boot)
 lib/
-  max30102/
-    __init__.py                # MAX30102 driver (I2C register access, FIFO reads)
-    circular_buffer.py         # Ring buffer backed by ucollections.deque
+  max30102.py                  # MAX30102 driver (I2C register access, FIFO reads)
   sh1106.py                   # SH1106 OLED driver (I2C, framebuf-based)
 test/
-  max30102_test.py             # On-device heart-rate demo (HeartRateMonitor class)
+  max30102_test.py             # On-device hardware check + heart-rate demo
   sh1106_test.py               # On-device display test suite (DisplayTester class)
 doc/
   features/                    # Per-feature documentation (see Documentation section)
@@ -65,7 +63,7 @@ Both test files have a `main()` entry point guarded by `if __name__ == "__main__
 - **MicroPython built-ins only** — no pip packages, no external dependencies. Use `machine`, `framebuf`, `ustruct`, `ucollections`, `utime`, etc.
 - Drivers live under `lib/` so MicroPython's import path finds them automatically.
 - Code must fit in the Pico 2W's constrained RAM — keep allocations small, prefer pre-allocated buffers.
-- The MAX30102 driver is adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library.
+- The MAX30102 driver is a lean flat module (`lib/max30102.py`), originally based on the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library.
 
 ## Documentation
 
