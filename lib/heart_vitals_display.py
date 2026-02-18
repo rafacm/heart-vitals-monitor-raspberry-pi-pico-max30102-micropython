@@ -2,8 +2,10 @@ from array import array
 from utime import ticks_ms, ticks_diff
 
 _DISP_W                  = 128
-_WAV_TOP                 = 9       # first y pixel of waveform (below separator at y=8)
-_WAV_H                   = 55      # y=9..63
+_WAV_TOP                 = 17      # first y pixel of waveform (below header + separator)
+_WAV_H                   = 38      # y=17..54
+_STATUS_Y                = 56      # status bar top
+_HEART_SIZE              = 16      # heart bitmap dimension
 _COMPUTE_INTERVAL_MS     = 2000    # BPM + SpO2 recompute cadence
 _DRAW_INTERVAL_MS        = 300     # display refresh cadence
 _NORM_RECOMPUTE_INTERVAL = 256     # samples between full min/max recompute
@@ -17,8 +19,14 @@ _IR_FINGER_THRESHOLD     = 10000
 _IR_AVG_WINDOW           = 20
 _SPO2_WINDOW             = 20
 
-_HEART_LARGE = b'\x66\xFF\xFF\x7E\x3C\x18\x18\x00'
-_HEART_SMALL = b'\x00\x66\x7E\x3C\x18\x18\x00\x00'
+_HEART_LARGE = (b'\x00\x00\x70\x0E\xF8\x1F\xFC\x3F'
+                b'\xFE\x7F\xFF\xFF\xFF\xFF\xFF\xFF'
+                b'\x7F\xFE\x3F\xFC\x1F\xF8\x0F\xF0'
+                b'\x07\xE0\x03\xC0\x01\x80\x00\x00')
+_HEART_SMALL = (b'\x00\x00\x00\x00\x38\x1C\x7C\x3E'
+                b'\x7E\x7E\x7F\xFE\x7F\xFE\x7F\xFE'
+                b'\x3F\xFC\x1F\xF8\x0F\xF0\x07\xE0'
+                b'\x03\xC0\x01\x80\x00\x00\x00\x00')
 
 
 class _HRAlgorithm:
@@ -196,9 +204,10 @@ class HeartVitalsDisplay:
 
         # Timing references
         now = ticks_ms()
-        self._last_compute_ms = now
-        self._last_draw_ms    = now
-        self._beat_ref_ms     = now
+        self._last_compute_ms  = now
+        self._last_draw_ms     = now
+        self._beat_ref_ms      = now
+        self._finger_start_ms  = 0
 
         self._hr = _HRAlgorithm()
 
@@ -245,7 +254,8 @@ class HeartVitalsDisplay:
 
             if self._finger and not finger_now:
                 # Finger removed — reset all state
-                self._finger     = False
+                self._finger          = False
+                self._finger_start_ms = 0
                 self._bpm        = None
                 self._spo2       = None
                 self._spo2_count = 0
@@ -268,7 +278,8 @@ class HeartVitalsDisplay:
                     self._wav_y[i] = centre
 
             elif not self._finger and finger_now:
-                self._finger = True
+                self._finger          = True
+                self._finger_start_ms = ticks_ms()
 
             if self._finger:
                 self._hr.add_sample(ir)
@@ -377,40 +388,41 @@ class HeartVitalsDisplay:
 
         if not self._finger:
             display.text("Place finger on", 4, 24)
-            display.text("the sensor", 24, 32)
+            display.text("the sensor", 24, 36)
         else:
-            # Heart animation (large for first 1/4 of beat cycle, small otherwise)
-            now     = ticks_ms()
+            now = ticks_ms()
+
+            # --- Header (y=0–15) ---
+            # Heart beat animation
             beat_ms = (60000 // self._bpm) if self._bpm else 600
             elapsed = ticks_diff(now, self._beat_ref_ms)
             if elapsed >= beat_ms:
                 self._beat_ref_ms = now
                 elapsed = 0
             heart_bmp = _HEART_LARGE if elapsed < (beat_ms // 4) else _HEART_SMALL
-            display.draw_bitmap(0, 0, heart_bmp, 8, 8)
+            display.draw_bitmap(0, 0, heart_bmp, _HEART_SIZE, _HEART_SIZE)
 
-            # BPM and SpO2 text (6 chars each = 48px each)
-            bpm_str  = ("HR:{:3d}".format(self._bpm)   if self._bpm  is not None
-                        else "HR:---")
-            spo2_str = ("O2:{:2d}%".format(self._spo2) if self._spo2 is not None
-                        else "O2:--%")
-            display.text(bpm_str,  9, 0)
-            display.text(spo2_str, 57, 0)
+            # BPM on top line, SpO2 on bottom line of header
+            bpm_str  = ("{:3d} BPM".format(self._bpm)  if self._bpm  is not None
+                        else "--- BPM")
+            spo2_str = ("{:3d} %".format(self._spo2)   if self._spo2 is not None
+                        else " -- %")
+            display.text(bpm_str,  18, 0)
+            display.text(spo2_str, 18, 8)
 
-            # Quality bar: 22px outline at x=106, 20px usable fill
-            display.rect(106, 0, 22, 8, 1)
-            fill_w = self._quality * 20 // 100
-            if fill_w > 0:
-                display.fill_rect(107, 1, fill_w, 6, 1)
+            # --- Separators ---
+            display.hline(0, 16, _DISP_W, 1)
+            display.hline(0, 55, _DISP_W, 1)
 
-            # Separator
-            display.hline(0, 8, 128, 1)
-
-            # Waveform (y=9..63): connect consecutive samples with vline
+            # --- Waveform (y=17–54), right-to-left scrolling ---
             wav    = self._wav_y
-            prev_y = 63 - wav[0]
+            w_idx  = self._wav_idx
+            bot    = _WAV_TOP + _WAV_H - 1          # y=54
+            ri     = w_idx % _DISP_W                 # oldest sample
+            prev_y = bot - wav[ri]
             for x in range(1, _DISP_W):
-                cur_y = 63 - wav[x]
+                ri    = (w_idx + x) % _DISP_W
+                cur_y = bot - wav[ri]
                 if cur_y == prev_y:
                     display.pixel(x, cur_y, 1)
                 else:
@@ -418,5 +430,16 @@ class HeartVitalsDisplay:
                     h  = (prev_y - cur_y) if prev_y > cur_y else (cur_y - prev_y)
                     display.vline(x, y0, h + 1, 1)
                 prev_y = cur_y
+
+            # --- Status bar (y=56–63) ---
+            # Elapsed time since finger placement
+            elapsed_s = ticks_diff(now, self._finger_start_ms) // 1000
+            display.text("{:3d}s".format(elapsed_s), 0, _STATUS_Y)
+
+            # Quality bar: outline at x=34, 94px wide, 8px tall
+            display.rect(34, _STATUS_Y, 94, 8, 1)
+            fill_w = self._quality * 92 // 100
+            if fill_w > 0:
+                display.fill_rect(35, _STATUS_Y + 1, fill_w, 6, 1)
 
         display.show()
