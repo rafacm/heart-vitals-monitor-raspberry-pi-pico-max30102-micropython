@@ -4,19 +4,21 @@ MicroPython heart-rate monitor running on a **Raspberry Pi Pico 2**. Reads pulse
 
 ## Hardware
 
-Both devices share a single I2C bus:
+Each device uses a separate I2C bus:
 
-| Signal | Pin  |
-|--------|------|
-| SDA    | GP12 |
-| SCL    | GP13 |
+| Bus  | Signal | Pin  | Device            |
+|------|--------|------|-------------------|
+| I2C1 | SDA    | GP18 | MAX30102          |
+| I2C1 | SCL    | GP19 | MAX30102          |
+| I2C0 | SDA    | GP12 | SH1106            |
+| I2C0 | SCL    | GP13 | SH1106            |
 
-| Device   | I2C Address | Notes |
-|----------|-------------|-------|
-| MAX30102 | 0x57        | Pulse-oximeter / heart-rate sensor |
-| SH1106   | 0x3C        | 128×64 OLED display |
+| Device   | Bus  | I2C Address | Notes |
+|----------|------|-------------|-------|
+| MAX30102 | I2C1 | 0x57        | Pulse-oximeter / heart-rate sensor |
+| SH1106   | I2C0 | 0x3C        | 128×64 OLED display |
 
-I2C runs at 400 kHz.
+Both buses run at 400 kHz.
 
 ## Project layout
 

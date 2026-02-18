@@ -1,7 +1,8 @@
 # Adapted from https://github.com/n-elia/MAX30102-MicroPython-driver/blob/main/examples/heart_rate/main.py
 # I2C Configuration:
-#   - SDA: GP12
-#   - SCL: GP13
+#   - Bus: I2C1
+#   - SDA: GP18
+#   - SCL: GP19
 #   - Address: 0x57
 
 import time
@@ -170,8 +171,9 @@ class HeartRateMonitor:
 def main():
     # I2C instance
     i2c = I2C(
-        sda=Pin(12),  # Here, use your I2C SDA pin
-        scl=Pin(13),  # Here, use your I2C SCL pin
+        1,            # I2C bus 1
+        sda=Pin(18),  # GP18 for SDA
+        scl=Pin(19),  # GP19 for SCL
         freq=400000,
     )  # Fast: 400kHz, slow: 100kHz
 
