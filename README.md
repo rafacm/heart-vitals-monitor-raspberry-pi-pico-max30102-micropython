@@ -102,6 +102,17 @@ Both test files have a `main()` entry point guarded by `if __name__ == "__main__
 - MAX30102 driver originally adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library, rewritten as a lean flat module.
 - Built with assistance from [Claude](https://claude.ai).
 
+## Features & Fixes
+
+| Date | Description | Document |
+|------|-------------|----------|
+| 2026-02-18 | Fix ring buffer double-advance causing false "Finger removed" in heart-rate demo | [ring-buffer-pop-fix.md](doc/features/ring-buffer-pop-fix.md) |
+| 2026-02-18 | MAX30102 driver rewrite: flat module, lean API, no external deps | [max30102-rewrite.md](doc/features/max30102-rewrite.md) |
+| 2026-02-18 | Sensor + OLED integration: live HR/SpO2 display, scrolling waveform, beating heart animation | [heart-vitals-display.md](doc/features/heart-vitals-display.md) |
+| 2026-02-17 | Fall back to last known BPM when peak detection temporarily fails | [bpm-fallback-on-peak-failure.md](doc/features/bpm-fallback-on-peak-failure.md) |
+| 2026-02-17 | Finger detection to avoid processing noise when no finger is present | [finger-detection.md](doc/features/finger-detection.md) |
+| 2026-02-17 | Fix fluctuating heart rate readings with signal processing pipeline | [heart-rate-stabilisation.md](doc/features/heart-rate-stabilisation.md) |
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
