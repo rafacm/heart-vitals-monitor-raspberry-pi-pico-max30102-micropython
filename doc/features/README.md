@@ -2,6 +2,7 @@
 
 | Date | Description | Document |
 |------|-------------|----------|
+| 2026-02-18 | Fix ring buffer double-advance causing false "Finger removed" in heart-rate demo | [ring-buffer-pop-fix.md](ring-buffer-pop-fix.md) |
 | 2026-02-18 | MAX30102 driver rewrite: flat module, lean API, no external deps | [max30102-rewrite.md](max30102-rewrite.md) |
 | 2026-02-18 | Sensor + OLED integration: live HR/SpO2 display, scrolling waveform, beating heart animation | [heart-vitals-display.md](heart-vitals-display.md) |
 | 2026-02-17 | Fall back to last known BPM when peak detection temporarily fails | [bpm-fallback-on-peak-failure.md](bpm-fallback-on-peak-failure.md) |

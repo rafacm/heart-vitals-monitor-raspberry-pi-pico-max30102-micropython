@@ -162,8 +162,7 @@ def hardware_check():
     n = sensor.available()
     print("Buffered samples after 500 ms: {}".format(n))
     if n > 0:
-        ir = sensor.pop_ir_from_storage()
-        red = sensor.pop_red_from_storage()
+        red, ir = sensor.pop_sample()
         print("First sample — IR: {}, RED: {}".format(ir, red))
 
     sensor.shutdown()
@@ -216,8 +215,7 @@ def heart_rate_demo():
             sensor.check()
 
             if sensor.available():
-                red_reading = sensor.pop_red_from_storage()
-                ir_reading = sensor.pop_ir_from_storage()
+                red_reading, ir_reading = sensor.pop_sample()
 
                 old = ir_avg_buf[ir_avg_idx]
                 ir_avg_buf[ir_avg_idx] = ir_reading

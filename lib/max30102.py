@@ -118,6 +118,16 @@ class MAX30102:
     def available(self):
         return (self._head - self._tail) % _BUF_SIZE
 
+    def pop_sample(self):
+        """Pop one (red, ir) pair from the ring buffer."""
+        if self._head == self._tail:
+            return 0, 0
+        t = self._tail
+        red = self._red[t]
+        ir = self._ir[t]
+        self._tail = (t + 1) % _BUF_SIZE
+        return red, ir
+
     def pop_ir_from_storage(self):
         if self._head == self._tail:
             return 0
