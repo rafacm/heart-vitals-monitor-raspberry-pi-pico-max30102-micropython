@@ -1,6 +1,6 @@
 # Heart Vitals
 
-MicroPython heart-rate monitor running on a **Raspberry Pi Pico 2**. Reads pulse-oximetry and heart rate data from a MAX30102 sensor and displays output on an SH1106 OLED screen.
+MicroPython heart-rate monitor running on a **Raspberry Pi Pico**. Reads pulse-oximetry and heart rate data from a MAX30102 sensor and displays output on an SH1106 OLED screen.
 
 ## Hardware
 
@@ -69,7 +69,7 @@ Both test files have a `main()` entry point guarded by `if __name__ == "__main__
 
 - **MicroPython built-ins only** — no pip packages, no external dependencies. Use `machine`, `framebuf`, `ustruct`, `ucollections`, `utime`, etc.
 - Drivers live under `lib/` so MicroPython's import path finds them automatically.
-- Code must fit in the Pico 2W's constrained RAM — keep allocations small, prefer pre-allocated buffers.
+- Code must fit in the Pico's constrained RAM — keep allocations small, prefer pre-allocated buffers.
 - The MAX30102 driver is a lean flat module (`lib/max30102.py`), originally based on the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library.
 
 ## Documentation

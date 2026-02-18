@@ -3,7 +3,7 @@ SH1106 OLED Display Driver for MicroPython
 Supports 128x64 OLED displays via I2C
 
 Author: Assistant
-Compatible with: Raspberry Pi Pico 2W and other MicroPython boards
+Compatible with: Raspberry Pi Pico and other MicroPython boards
 """
 
 import framebuf

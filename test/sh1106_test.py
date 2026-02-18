@@ -1,5 +1,5 @@
 """
-SH1106 OLED Display Test Suite for Raspberry Pi Pico 2W
+SH1106 OLED Display Test Suite for Raspberry Pi Pico
 
 Tests various display functions including:
 - Basic text display
@@ -46,7 +46,7 @@ class DisplayTester:
         self.display.text("SH1106 OLED", 10, 0)
         self.display.text("128x64 pixels", 10, 12)
         self.display.text("MicroPython", 10, 24)
-        self.display.text("Pico 2W", 10, 36)
+        self.display.text("Pico", 10, 36)
         self.display.text("I2C: 0x3C", 10, 48)
         self.display.show()
         self.clear_and_wait()
@@ -466,7 +466,7 @@ def quick_test():
     # Simple test
     display.fill(0)
     display.text("Hello World!", 15, 10)
-    display.text("Pico 2W", 35, 25)
+    display.text("Pico", 35, 25)
     display.text("SH1106 OLED", 20, 40)
     display.rect(0, 0, 128, 64, 1)
     display.show()
