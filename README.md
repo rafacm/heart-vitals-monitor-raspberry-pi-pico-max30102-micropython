@@ -61,13 +61,20 @@ test/
 
 Use `mpremote` (install with `pip install mpremote`):
 
+## Copy entire project to the board
 ```bash
-# Copy entire project to the board
-mpremote cp -r lib/ :lib/
-mpremote cp main.py :main.py
+mpremote cp -r lib/ test/ *.py :
+```
 
-# Copy and run a test file
-mpremote cp -r lib/ :lib/ + cp test/max30102_test.py :test/max30102_test.py + run test/max30102_test.py
+## Copy and run a test file
+```bash
+mpremote cp test/<test file>.py :test/ + run test/<test_file>.py
+```
+
+## Resetting the board
+```bash
+# Resetting the board
+mpremote reset
 ```
 
 ## Running tests
@@ -78,6 +85,8 @@ Tests run directly on the Pico — there is no host-side test harness. Connect t
 mpremote run test/max30102_test.py   # Heart-rate acquisition test
 mpremote run test/sh1106_test.py     # OLED display test suite
 ```
+
+Both test files have a `main()` entry point guarded by `if __name__ == "__main__"`.
 
 ## Acknowledgements
 
