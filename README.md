@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Heart vitals monitor using Raspberry Pi Pico, a MAX30102 heart rate sensor and a 128×64 OLED display, each connected to the Pico on a separate I2C bus.
+Heart vitals monitor using Raspberry Pi Pico, a MAX30102 heart rate sensor and a 128×64 OLED display, each connected to the Pico on a separate I2C bus. Implemented with [Claude Code](https://code.claude.com/docs/en/overview).
 
 ## Hardware
 
@@ -101,7 +101,7 @@ Both test files have a `main()` entry point guarded by `if __name__ == "__main__
 ## Acknowledgements
 
 - MAX30102 driver originally adapted from the [n-elia MicroPython port](https://github.com/n-elia/MAX30102-MicroPython-driver) of the SparkFun library, rewritten as a lean flat module.
-- Built with assistance from [Claude](https://claude.ai).
+- Built with [Claude](https://claude.ai).
 
 ## Features & Fixes
 
