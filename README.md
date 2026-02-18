@@ -1,4 +1,4 @@
-# Heart Vitals
+# Heart Vitals Monitor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -55,12 +55,15 @@ The on-chip ADC samples at a configurable rate (50–3200 Hz) with programmable 
 
 ```
 main.py                        # Entry point (runs on boot)
+CLAUDE.md                      # Project instructions for Claude Code
 lib/
   max30102.py                  # MAX30102 driver (I2C register access, FIFO reads)
   sh1106.py                   # SH1106 OLED driver (I2C, framebuf-based)
 test/
   max30102_test.py             # On-device hardware check + heart-rate demo
   sh1106_test.py               # On-device display test suite (DisplayTester class)
+doc/
+  features/                    # Per-feature documentation (one Markdown file per feature)
 ```
 
 ## Deploying to the board
