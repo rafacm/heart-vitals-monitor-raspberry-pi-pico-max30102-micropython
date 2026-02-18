@@ -6,6 +6,12 @@ Heart vitals monitor using Raspberry Pi Pico 2W, a MAX30102 heart rate sensor an
 
 ## Hardware
 
+![Raspberry Pi Pico 2W, a MAX30102 heart rate sensor and a 128×64 OLED display](doc/images/heart-vitals-raspberry-pi-pico-max30102.png)
+
+Important points (marked in the image above):
+1. Make sure you connect the power supply to the `VSYS` pin and NOT the `VBUS` pin. This way you can power the Pico both from the micro-USB connection and the power supply board.
+2. Make sure you select the `3.3V` pins
+
 Each device uses a dedicated I2C bus, both running at 400 kHz:
 
 | Bus  | Signal | Pin  | Device   |
