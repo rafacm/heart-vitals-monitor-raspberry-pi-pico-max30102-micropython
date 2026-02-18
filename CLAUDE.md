@@ -78,3 +78,4 @@ Feature documentation lives in `doc/features/`, one Markdown file per feature or
 - **Files modified** — list of touched files with a one-line summary of each change.
 
 Keep prose concise. Prefer tables and lists over long paragraphs. Use code blocks for CLI commands and signal-flow diagrams.
+Add an entry for each feature or fix in the `doc/features/README.md` file.
