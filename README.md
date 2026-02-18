@@ -11,7 +11,7 @@ Heart vitals monitor using Raspberry Pi Pico, a MAX30102 heart rate sensor and a
 
 Important points (marked in the image above):
 1. Make sure you connect the power supply to the `VSYS` pin and NOT the `VBUS` pin. This way you can power the Pico both from the micro-USB connection and the power supply board.
-2. Make sure you select the `3.3V` pins in the power supply board
+2. Make sure you select the `5V` pins in the power supply board
 
 See the [Raspberry Pi Pico pinout](https://pico.pinout.xyz/) for details. 
 
